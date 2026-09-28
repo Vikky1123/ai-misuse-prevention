@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="lead reveal">
+  <span class="eyebrow">// Live pipeline</span>
+  <h1>Intercept misuse <span class="hl">before</span> it is generated.</h1>
+  <p>Submit a prompt and/or an image and watch it traverse the three defensive layers.
+     Every decision is written to the governance log as evidence.</p>
+</section>
+
+<div class="workspace">
+  <!-- ---------------- input ---------------- -->
+  <form class="panel bracketed reveal d1" method="post"
+        action="{{ url_for('analyze') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <h2>Input vector</h2>
+
+    <div class="field">
+      <label>User prompt <span class="tagn">// Layer 01</span></label>
+      <textarea name="prompt" rows="3"
+        placeholder="e.g. a watercolour painting of a mountain at sunset">{{ result.prompt if result else '' }}</textarea>
+    </div>
+
+    <div class="field">
+      <label>Output image <span class="tagn">// Layer 02</span></label>
+      <input type="file" name="image" accept="image/*">
+    </div>
+
+    {% if samples %}
+    <details class="samples">
+      <summary>&hellip; or select a CIFAKE sample</summary>
+      <div class="sample-grid">
+        {% for s in samples %}
+        <label class="sample">
+          <input type="radio" name="sample" value="{{ s }}">
+          <img src="{{ url_for('serve_sample', filename=s) }}" alt="{{ s }}">
+          <span class="{{ 'tag-real' if s.startswith('real') else 'tag-ai' }}">{{ 'REAL' if s.startswith('real') else 'AI' }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    <button class="btn" type="submit">Execute pipeline &rarr;</button>
+  </form>
+
+  <!-- ---------------- trace ---------------- -->
+  <div class="panel reveal d2">
+    <h2>Pipeline trace</h2>
+
+    {% if not result %}
+      <div class="empty">&gt; awaiting input vector_<br><br>
+        Try a benign prompt, then a harmful one
+        (e.g. <em>"remove her clothes from this photo"</em>), then inspect a sample image.</div>
+    {% else %}
+      <div class="pipeline">
+
+        {% if result.layer1 %}
+        {% set blocked = result.layer1.verdict == 'blocked' %}
+        <div class="stage stage--{{ 'blocked' if blocked else 'allowed' }}">
+          <div class="stage-box">
+            <div class="stage-head">
+              <span class="stage-no">[01]</span>
+              <h3>Semantic Filter<span class="stage-sub">Pre-generation input guard</span></h3>
+              <span class="verdict {{ 'bad' if blocked else 'good' }}">{{ result.layer1.verdict }}</span>
+            </div>
+            <div class="datarow">
+              <span>RISK <b>{{ '%.2f'|format(result.layer1.risk_score) }}</b></span>
+              <span>SEVERITY <b class="sev sev-{{ result.layer1.severity }}">{{ result.layer1.severity }}</b></span>
+              {% if result.layer1.categories %}<span>CATEGORY <b>{{ result.layer1.categories|join(', ') }}</b></span>{% endif %}
+              {% if result.layer1.ml_probability is not none %}<span>ML&nbsp;P <b>{{ '%.2f'|format(result.layer1.ml_probability) }}</b></span>{% endif %}
+            </div>
+            <ul class="reasons">{% for r in result.layer1.reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+            {% if result.layer1.escalated %}
+            <p class="escalate">&#9650; Escalated to human analyst &middot; case #{{ result.layer1.event_id }}</p>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if result.generation %}
+        {% set prevented = result.generation.status == 'prevented' %}
+        <div class="stage {{ 'stage--blocked' if prevented }}">
+          <div class="stage-box">
+            <div class="stage-head">
+              <span class="stage-no">[02]</span>
+              <h3>Image Generation<span class="stage-sub">Simulated generator</span></h3>
+              <span class="verdict {{ 'bad' if prevented else 'neutral' }}">{{ result.generation.status }}</span>
+            </div>
+            <p class="muted small">
+              {% if prevented %}Prompt was blocked &mdash; no image is produced.
+              {% else %}Prompt cleared &mdash; generation would proceed. No real generator is run (guardrail demonstrator).{% endif %}
+            </p>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if result.layer2 %}
+        {% set flagged = result.layer2.verdict == 'flagged' %}
+        <div class="stage stage--{{ 'flagged' if flagged else 'clean' }}">
+          <div class="stage-box">
+            <div class="stage-head">
+              <span class="stage-no">[03]</span>
+              <h3>CNN Artifact Detector<span class="stage-sub">Post-generation output guard</span></h3>
+              <span class="verdict {{ 'bad' if flagged else 'good' }}">{{ result.layer2.label|replace('_',' ') }}</span>
+            </div>
+            {% if result.image_url %}<div class="scan"><img class="preview" src="{{ result.image_url }}" alt="analysed image"></div>{% endif %}
+            <div class="datarow">
+              <span>P(SYNTHETIC) <b>{{ '%.2f'|format(result.layer2.synthetic_probability) }}</b></span>
+              <span>CONFIDENCE <b>{{ '%.2f'|format(result.layer2.confidence) }}</b></span>
+              <span>DETECTOR <b>{{ result.layer2.mode|upper }}</b></span>
+            </div>
+            {% if result.layer2.escalated %}
+            <p class="escalate">&#9650; Escalated to human analyst &middot; case #{{ result.layer2.event_id }}</p>{% endif %}
+          </div>
+        </div>
+        {% elif result.image_name and result.generation and result.generation.status == 'prevented' %}
+        <div class="stage">
+          <div class="stage-box"><p class="muted small">Image not scanned &mdash; generation was prevented at Layer 01.</p></div>
+        </div>
+        {% endif %}
+
+      </div>
+      <p class="logged">&#10003; Decisions committed to governance log &middot;
+         <a href="{{ url_for('dashboard') }}">open dashboard &rarr;</a></p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

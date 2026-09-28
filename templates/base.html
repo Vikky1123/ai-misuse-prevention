@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AI·MPS — Threat-Intelligence Console{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="{{ url_for('index') }}">
+      <span class="brand-mark">AI&middot;MPS</span>
+      <span class="brand-text">
+        <b>AI Misuse Prevention</b>
+        <i>threat-intelligence console</i>
+      </span>
+    </a>
+    <nav class="nav">
+      <a class="tab {{ 'active' if request.endpoint in ['index','analyze'] }}" href="{{ url_for('index') }}">Pipeline</a>
+      <a class="tab {{ 'active' if request.endpoint in ['dashboard','case','review'] }}" href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a class="tab {{ 'active' if request.endpoint == 'performance' }}" href="{{ url_for('performance') }}">Performance</a>
+    </nav>
+  </header>
+
+  <div class="statusbar">
+    <span><span class="pulse"></span>System Active</span>
+    <span>3 Layers Online</span>
+    <span>Filter &middot; CNN &middot; Governance</span>
+    <span class="right">DELSU // Computer Science</span>
+  </div>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}<div class="flash">{{ messages|join(' ') }}</div>{% endif %}
+  {% endwith %}
+
+  <main>{% block content %}{% endblock %}</main>
+
+  <footer class="foot">
+    <span class="eyebrow dim">// Architecture</span>
+    <p>Input filtering &rarr; CNN detection &rarr; governance &amp; logging. Implemented from the seminar
+       <em>"A Review of Information System Security for Artificial Intelligence Information Misuse Prevention"</em>
+       &mdash; Oke Ovigueronye, Delta State University.</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

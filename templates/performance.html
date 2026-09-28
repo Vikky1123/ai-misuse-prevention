@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="lead reveal">
+  <span class="eyebrow">// Model performance</span>
+  <h1>Model Performance</h1>
+  <p>Evaluation evidence for both learned components &mdash; drop these figures straight into your
+     project report's Results chapter.</p>
+</section>
+
+<div class="metrics-grid">
+  <div class="metric reveal d1">
+    <div class="v">{% if l1 %}<span data-count="{{ (l1.holdout_accuracy*100)|round(1) }}" data-decimals="1">{{ (l1.holdout_accuracy*100)|round(1) }}</span>%{% else %}&mdash;{% endif %}</div>
+    <div class="l">Layer 1 &middot; filter accuracy</div>
+  </div>
+  <div class="metric reveal d2">
+    <div class="v">{% if l1 %}<span data-count="{{ (l1.cv_mean*100)|round(1) }}" data-decimals="1">{{ (l1.cv_mean*100)|round(1) }}</span>%{% else %}&mdash;{% endif %}</div>
+    <div class="l">Layer 1 &middot; 5-fold CV</div>
+  </div>
+  <div class="metric reveal d3">
+    <div class="v">{% if l2 %}<span data-count="{{ (l2.test_accuracy*100)|round(2) }}" data-decimals="2">{{ (l2.test_accuracy*100)|round(2) }}</span>%{% else %}&mdash;{% endif %}</div>
+    <div class="l">Layer 2 &middot; CNN test accuracy</div>
+  </div>
+  <div class="metric reveal d4">
+    <div class="v">{{ detector_mode|upper }}</div>
+    <div class="l">Active detector mode</div>
+  </div>
+</div>
+
+<!-- ---------------- Layer 1 ---------------- -->
+<div class="panel bracketed reveal d2" style="margin-bottom:1.3rem">
+  <h2>Layer 01 &mdash; Semantic Filter</h2>
+  {% if l1 %}
+  <p class="muted small" style="margin-top:-.6rem">
+    TF-IDF + Logistic Regression on {{ l1.n_total }} labelled prompts
+    ({{ l1.n_harmful }} harmful / {{ l1.n_safe }} safe). 5-fold CV
+    {{ (l1.cv_mean*100)|round(1) }}% &plusmn; {{ (l1.cv_std*100)|round(1) }}%.</p>
+  <div class="table-wrap">
+  <table class="cm" style="max-width:520px">
+    <thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr></thead>
+    <tbody>
+      <tr><td>harmful</td>
+        <td>{{ '%.3f'|format(l1.report['harmful']['precision']) }}</td>
+        <td>{{ '%.3f'|format(l1.report['harmful']['recall']) }}</td>
+        <td>{{ '%.3f'|format(l1.report['harmful']['f1-score']) }}</td>
+        <td>{{ l1.report['harmful']['support']|int }}</td></tr>
+      <tr><td>safe</td>
+        <td>{{ '%.3f'|format(l1.report['safe']['precision']) }}</td>
+        <td>{{ '%.3f'|format(l1.report['safe']['recall']) }}</td>
+        <td>{{ '%.3f'|format(l1.report['safe']['f1-score']) }}</td>
+        <td>{{ l1.report['safe']['support']|int }}</td></tr>
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="empty">Run <span class="mono">py layer1_filter/train_filter.py</span> to generate metrics.</p>
+  {% endif %}
+</div>
+
+<!-- ---------------- Layer 2 ---------------- -->
+<div class="panel reveal d3">
+  <h2>Layer 02 &mdash; CNN Synthetic-Artifact Detector</h2>
+  {% if l2 %}
+  <p class="muted small" style="margin-top:-.6rem">
+    Lightweight CNN trained on the CIFAKE dataset (real CIFAR-10 vs Stable-Diffusion images).
+    Held-out test accuracy <b style="color:var(--signal)">{{ (l2.test_accuracy*100)|round(2) }}%</b>.</p>
+
+  <div class="figs" style="margin:1rem 0">
+    <div>
+      <div class="figure"><img src="{{ url_for('model_asset', filename='confusion_matrix.png') }}" alt="confusion matrix"></div>
+      <p class="figcap">// Confusion matrix</p>
+    </div>
+    <div>
+      <div class="figure"><img src="{{ url_for('model_asset', filename='training_history.png') }}" alt="training history"></div>
+      <p class="figcap">// Training vs validation accuracy</p>
+    </div>
+  </div>
+
+  <div class="figs">
+    <div>
+      <p class="figcap" style="margin-bottom:.5rem">// Confusion matrix (counts)</p>
+      <table class="cm">
+        <thead><tr><th></th><th>Pred REAL</th><th>Pred AI-GEN</th></tr></thead>
+        <tbody>
+          <tr><th>Actual REAL</th><td class="diag">{{ l2.confusion_matrix[0][0] }}</td><td class="off">{{ l2.confusion_matrix[0][1] }}</td></tr>
+          <tr><th>Actual AI-GEN</th><td class="off">{{ l2.confusion_matrix[1][0] }}</td><td class="diag">{{ l2.confusion_matrix[1][1] }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <p class="figcap" style="margin-bottom:.5rem">// Per-class metrics</p>
+      <table class="cm">
+        <thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead>
+        <tbody>
+          <tr><td>real</td>
+            <td>{{ '%.3f'|format(l2.report['real']['precision']) }}</td>
+            <td>{{ '%.3f'|format(l2.report['real']['recall']) }}</td>
+            <td>{{ '%.3f'|format(l2.report['real']['f1-score']) }}</td></tr>
+          <tr><td>ai_generated</td>
+            <td>{{ '%.3f'|format(l2.report['ai_generated']['precision']) }}</td>
+            <td>{{ '%.3f'|format(l2.report['ai_generated']['recall']) }}</td>
+            <td>{{ '%.3f'|format(l2.report['ai_generated']['f1-score']) }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <p class="empty">Run <span class="mono">py layer2_detector/train_detector.py</span> to generate metrics.</p>
+  {% endif %}
+</div>
+{% endblock %}

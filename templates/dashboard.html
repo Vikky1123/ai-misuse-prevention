@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="lead reveal">
+  <span class="eyebrow">// Governance &amp; logging</span>
+  <h1>Analyst Dashboard</h1>
+  <p>The evidentiary record supporting the NDPA (2023) and the Cybercrimes (Amendment) Act (2024),
+     with human oversight of escalated cases.</p>
+</section>
+
+<div class="telemetry">
+  <div class="tile reveal d1"><span class="n" data-count="{{ stats.total }}">{{ stats.total }}</span><span class="k">Total events</span></div>
+  <div class="tile bad reveal d2"><span class="n" data-count="{{ stats.blocked }}">{{ stats.blocked }}</span><span class="k">Prompts blocked</span></div>
+  <div class="tile warn reveal d3"><span class="n" data-count="{{ stats.flagged }}">{{ stats.flagged }}</span><span class="k">Images flagged</span></div>
+  <div class="tile reveal d4"><span class="n" data-count="{{ stats.pending_review }}">{{ stats.pending_review }}</span><span class="k">Pending review</span></div>
+  <div class="tile crit reveal d5"><span class="n" data-count="{{ stats.critical }}">{{ stats.critical }}</span><span class="k">Critical</span></div>
+</div>
+
+<div class="filters">
+  <a class="tab {{ 'active' if view=='all' }}" href="{{ url_for('dashboard', view='all') }}">All</a>
+  <a class="tab {{ 'active' if view=='flagged' }}" href="{{ url_for('dashboard', view='flagged') }}">Blocked / Flagged</a>
+  <a class="tab {{ 'active' if view=='pending' }}" href="{{ url_for('dashboard', view='pending') }}">Pending review</a>
+</div>
+
+<div class="panel reveal d3">
+<div class="table-wrap">
+<table class="logtable">
+  <thead>
+    <tr><th>ID</th><th>Timestamp</th><th>Type</th><th>Input</th><th>Verdict</th>
+        <th>Risk</th><th>Severity</th><th>Review</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for e in events %}
+    <tr>
+      <td class="mono">{{ '%03d'|format(e.id) }}</td>
+      <td class="mono small">{{ e.timestamp|replace('T',' ') }}</td>
+      <td class="mono small">{{ e.event_type }}</td>
+      <td class="summary">{{ e.input_summary|truncate(44) }}</td>
+      <td><span class="verdict {{ 'bad' if e.verdict in ['blocked','flagged'] else 'good' }}">{{ e.verdict }}</span></td>
+      <td class="mono">{{ '%.2f'|format(e.risk_score) }}</td>
+      <td><span class="sev sev-{{ e.severity }}">{{ e.severity }}</span></td>
+      <td>
+        {% if e.verdict in ['allowed','clean'] %}<span class="muted">&mdash;</span>
+        {% elif e.reviewed %}<span class="ok-tick">&#10003; cleared</span>
+        {% else %}<span class="pending">pending</span>{% endif %}
+      </td>
+      <td><a class="rowlink" href="{{ url_for('case', event_id=e.id) }}">inspect &rarr;</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" class="empty center" style="border:0">No events yet &mdash; run the pipeline demo first.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

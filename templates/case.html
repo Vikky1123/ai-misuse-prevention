@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="lead reveal">
+  <span class="eyebrow">// Evidence dossier</span>
+  <h1>Case&nbsp;#{{ '%03d'|format(ev.id) }}</h1>
+  <a class="backlink" href="{{ url_for('dashboard') }}">&larr; back to dashboard</a>
+</section>
+
+<div class="dossier">
+  <div class="panel bracketed reveal d1">
+    <h2>Evidence record</h2>
+    <dl class="kv">
+      <dt>Timestamp</dt><dd class="mono">{{ ev.timestamp|replace('T',' ') }}</dd>
+      <dt>Event type</dt><dd class="mono">{{ ev.event_type }}</dd>
+      <dt>Verdict</dt><dd><span class="verdict {{ 'bad' if ev.verdict in ['blocked','flagged'] else 'good' }}">{{ ev.verdict }}</span></dd>
+      <dt>Risk score</dt><dd class="mono">{{ '%.4f'|format(ev.risk_score) }}</dd>
+      <dt>Severity</dt><dd><span class="sev sev-{{ ev.severity }}">{{ ev.severity }}</span></dd>
+      <dt>Input</dt><dd class="break">{{ ev.input_summary }}</dd>
+    </dl>
+
+    {% if ev.event_type == 'image' %}
+      <div class="scan"><img class="preview" alt="analysed image"
+        src="{{ url_for('serve_upload', filename=ev.input_summary) }}"
+        onerror="this.onerror=null;this.src='{{ url_for('serve_sample', filename=ev.input_summary) }}'"></div>
+    {% endif %}
+
+    <h2 style="margin-top:1.3rem">Technical detail</h2>
+    <pre class="json">{{ ev.details_json }}</pre>
+  </div>
+
+  <div class="panel reveal d2 review">
+    <h2>Human review</h2>
+    <p style="margin-top:-.3rem">
+      {% if ev.reviewed %}<span class="verdict good">Reviewed</span>
+      {% else %}<span class="verdict warn">Pending</span>{% endif %}
+    </p>
+    {% if ev.analyst_note %}<p class="note"><b>Note:</b> {{ ev.analyst_note }}</p>{% endif %}
+
+    <form method="post" action="{{ url_for('review', event_id=ev.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="note">Analyst note / decision</label>
+      <textarea id="note" name="note" rows="5"
+        placeholder="e.g. Confirmed NCII attempt against an identifiable person; retained for Cybercrimes Act referral.">{{ ev.analyst_note or '' }}</textarea>
+      <button class="btn" type="submit">Sign off &amp; mark reviewed</button>
+    </form>
+    <p class="muted small" style="margin-top:1rem">Human sign-off keeps automated flagging
+       auditable and open to legal challenge &mdash; as the seminar requires.</p>
+  </div>
+</div>
+{% endblock %}

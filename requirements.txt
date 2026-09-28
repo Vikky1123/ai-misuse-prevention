@@ -1,0 +1,18 @@
+# AI Information Misuse Prevention System - dependencies
+# Install with:  py -m pip install -r requirements.txt
+
+flask==3.1.2
+flask-wtf==1.2.2
+scikit-learn==1.9.0
+joblib==1.5.3
+numpy==2.4.2
+pandas==3.0.0
+pillow==12.0.0
+matplotlib==3.10.8
+requests==2.32.4
+
+# --- Layer 2 deep-learning detector (recommended) ---
+# Provides the CNN-based synthetic-image detector. If TensorFlow will not
+# install on your Python version, the system automatically falls back to a
+# frequency-analysis detector and still runs end-to-end (see README).
+tensorflow==2.21.0
